@@ -1,4 +1,4 @@
-﻿numero_station,SNPA,statut,nom,adresse,arrondissement_ville,latitude,longitude,X,Y,secteur_id,secteur_nom,hauteur,"numero_station,SNPA,statut,nom,adresse,arrondissement_ville,latitude,longitude,X,Y,secteur_id,secteur_nom,hauteur"
+﻿numero_station,SNPA,statut,nom,adresse,arrondissement_ville,latitude,longitude,X,Y,secteur_id,secteur_nom,hauteur
 1,50102,fermé,Jardin Botanique,"Jardin Botanique, Montréal",Rosemont-La Petite-Patrie,45.56221,-73.571785,299196.165787255,5046924.62679243,1,Centre-Ville,4,
 3,50103,ouvert,Saint-Jean-Baptiste ,"1050 A, St-Jean-Baptiste",Rivière-des-Prairies,45.641026,-73.499682,304824.789662098,5055681.13314813,4,Est,4,
 6,50124,ouvert,Anjou,7650 rue Châteauneuf,Anjou,45.602846,-73.558874,300207.366295338,5051439.76806955,4,Est,12,

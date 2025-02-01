@@ -1,6 +1,6 @@
 # About
 
-Question: In the city of Montreal, does the violation of environmental regulations by companies have a direct an noticeable impact on the city's air and water quality?  
+Question: In the city of Montreal, does the violation of environmental regulations by companies have a direct an noticeable impact on the city's air and water quality? (Water quality is a stretch goal)
 
 ## Team Members
 
@@ -10,6 +10,10 @@ Question: In the city of Montreal, does the violation of environmental regulatio
 | Neil Fisher    | neil3524@gmail.com        |
 
 # Contributing
+
+## Stations Data
+
+The station data downloaded from the [Montreal Open API](https://donnees.montreal.ca/dataset/rsqa-liste-des-stations) had a malformed heading. They duplicated the column names. You should remove them or just us the existing file in the repo.
 
 # Regulations
 

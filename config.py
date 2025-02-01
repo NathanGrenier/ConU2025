@@ -11,9 +11,12 @@ DATA_PATH = "./data"
 STATIONS_FILE_PATH = f"{DATA_PATH}/stations.csv"
 AIR_QUALITY_FILE_PATH = f"{DATA_PATH}/air/air_quality_2022-2024.csv"
 VIOLATIONS_FILE_PATH = f"{DATA_PATH}/violations.csv"
+STATIONS_FILE_PATH = f"{DATA_PATH}/stations.csv"
 
 DUMP_PATH = f"{DATA_PATH}/dump"
 CLEANED_AIR_QUALITY_FILE_PATH = f"{DUMP_PATH}/cleaned_air_quality.csv"
+CLEANED_VIOLATIONS_FILE_PATH = f"{DUMP_PATH}/cleaned_violations.csv"
+CLEANED_STATIONS_FILE_PATH = f"{DUMP_PATH}/cleaned_stations.csv"
 
 INFLUXDB_BUCKET = os.getenv("INFLUX_DB_BUCKET")
 url = os.getenv("INFLUX_DB_URL")
