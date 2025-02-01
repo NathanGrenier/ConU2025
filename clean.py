@@ -2,11 +2,21 @@ import logging
 import os
 import re
 from enum import Enum
-from typing import List
+from typing import Dict, List
 
+import influxdb_client
 import pandas as pd
+from influxdb_client.client.write_api import SYNCHRONOUS
 
-from config import AIR_QUALITY_FILE_PATH, DUMP_PATH, VIOLATIONS_FILE_PATH, logger
+from config import (
+    AIR_QUALITY_FILE_PATH,
+    CLEANED_AIR_QUALITY_FILE_PATH,
+    DUMP_PATH,
+    INFLUXDB_BUCKET,
+    VIOLATIONS_FILE_PATH,
+    influxdbClient,
+    logger,
+)
 
 
 class ViolationDomain(Enum):
@@ -45,46 +55,62 @@ def combineDateHour(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def exportDfWithInfluxDBAnnotations(df: pd.DataFrame, annotations: List[str]) -> None:
-    df["_measurement"] = "air_quality"
-    df["stationId"] = df["stationId"].astype(str)
-    df["aqi"] = df["aqi"].astype(int)
-    # Reorder Columns
-    df = df[["_measurement", "stationId", "pollutant", "aqi", "timestamp"]]
+def uploadDfToInfluxDb(
+    path: str, annotations: Dict[str, str], cleanUpload: bool = True
+) -> None:
+    # airQualityAnnotations = [
+    #     "#group,true,true,true,false,false",
+    #     "#datatype,measurement,tag,tag,long,dateTime:RFC3339",
+    #     "#default,air_quality,,,,",
+    # ]
 
-    with open(
-        f"{DUMP_PATH}/cleaned_air_quality(annotated).csv", "w", encoding="utf-8"
-    ) as f:
-        # Write annotations
-        for line in annotations:
-            f.write(line + "\n")
-        # Write header
-        f.write(",".join(df.columns) + "\n")
-        # Write data
-        df.to_csv(f, header=False, index=False, lineterminator="\n")
+    if cleanUpload:
+        logger.info(f"Deleting all records from InfluxDB bucket {INFLUXDB_BUCKET}")
+        delete_api = influxdbClient.delete_api()
+        start = "1970-01-01T00:00:00Z"
+        stop = "2100-01-01T00:00:00Z"
+        delete_api.delete(
+            start, stop, '_measurement="air_quality"', bucket=INFLUXDB_BUCKET
+        )
+
+    for chunk in pd.read_csv(path, chunksize=100_000):
+        with influxdbClient.write_api(write_options=SYNCHRONOUS) as write_api:
+            try:
+                write_api.write(record=chunk, **annotations)
+                logger.debug(f"Uploaded {len(chunk)} records to InfluxDB")
+            except influxdb_client.client.exceptions.InfluxDBError as e:
+                logger.error(e)
 
 
 if __name__ == "__main__":
     logger.setLevel(logging.DEBUG)
 
-    df_air_quality = pd.read_csv(f"{AIR_QUALITY_FILE_PATH}")
-    airQualityNameMapping = {
-        "stationId": "stationId",
-        "polluant": "pollutant",
-        "valeur": "aqi",
-        "date": "date",
-        "heure": "hour",
-    }
-    df_air_quality = renameColumns(df_air_quality, airQualityNameMapping)
+    if not os.path.exists(CLEANED_AIR_QUALITY_FILE_PATH):
+        logger.info("Cleaned Air Quality Data not Found: Cleaning Air Quality Data")
+        df_air_quality = pd.read_csv(f"{AIR_QUALITY_FILE_PATH}")
+        airQualityNameMapping = {
+            "stationId": "stationId",
+            "polluant": "pollutant",
+            "valeur": "aqi",
+            "date": "date",
+            "heure": "hour",
+        }
+        df_air_quality = renameColumns(df_air_quality, airQualityNameMapping)
 
-    df_air_quality = combineDateHour(df_air_quality)
-    df_air_quality = df_air_quality.drop(columns=["date", "hour"])
-    airQualityAnnotations = [
-        "#group,true,true,true,false,false",
-        "#datatype,measurement,tag,tag,long,dateTime:RFC3339",
-        "#default,air_quality,,,,",
-    ]
-    exportDfWithInfluxDBAnnotations(df_air_quality, airQualityAnnotations)
+        df_air_quality = combineDateHour(df_air_quality)
+        df_air_quality = df_air_quality.drop(columns=["date", "hour"])
+        dumpData(df_air_quality, f"{DUMP_PATH}/cleaned_air_quality.csv")
+
+    uploadDfToInfluxDb(
+        CLEANED_AIR_QUALITY_FILE_PATH,
+        {
+            "bucket": f"{INFLUXDB_BUCKET}",
+            "data_frame_measurement_name": "air_quality",
+            "data_frame_tag_columns": ["stationId", "pollutant"],
+            "data_frame_timestamp_column": "timestamp",
+        },
+        cleanUpload=True,
+    )
 
     df_violations = pd.read_csv(f"{VIOLATIONS_FILE_PATH}")
     violationsNameMapping = {
@@ -101,23 +127,3 @@ if __name__ == "__main__":
     df_violations = renameColumns(df_violations, violationsNameMapping)
 
     df_violations = cleanViolations(df_violations)
-
-    # List all regulations violated and the number of times they were violated
-    # regulations_violated = df_violations["regulation_violated"].value_counts()
-    # print("Regulations violated and the number of times they were violated:")
-    # print(regulations_violated)
-
-    # Display locations of violations of the type "2001-10"
-    # violations_2001_10 = df_violations[
-    #     df_violations["regulation_violated"].str.contains("2001-10")
-    # ]
-    # print("Location of violations of the type '2001-10':")
-    # pd.set_option("display.max_colwidth", None)
-    # print(violations_2001_10["location"])
-
-    # violations_2001_10 = df_violations[
-    #     df_violations["regulation_violated"].str.contains("2001-10")
-    # ]
-    # print("Description of violations of the type '2001-10':")
-    # pd.set_option("display.max_colwidth", None)
-    # print(violations_2001_10["offender_name"])

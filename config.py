@@ -2,23 +2,24 @@ import logging
 import os
 import time
 
+import influxdb_client
 from dotenv import load_dotenv
 
 load_dotenv()
 
 DATA_PATH = "./data"
-DUMP_PATH = f"{DATA_PATH}/dump"
-VIOLATIONS_FILE_PATH = f"{DATA_PATH}/violations.csv"
 STATIONS_FILE_PATH = f"{DATA_PATH}/stations.csv"
 AIR_QUALITY_FILE_PATH = f"{DATA_PATH}/air/air_quality_2022-2024.csv"
+VIOLATIONS_FILE_PATH = f"{DATA_PATH}/violations.csv"
 
-POSTGRES_CONFIG = {
-    "host": "localhost",
-    "port": 5432,
-    "dbname": os.getenv("POSTGRES_DB"),
-    "user": os.getenv("POSTGRES_USER"),
-    "password": os.getenv("POSTGRES_PASSWORD"),
-}
+DUMP_PATH = f"{DATA_PATH}/dump"
+CLEANED_AIR_QUALITY_FILE_PATH = f"{DUMP_PATH}/cleaned_air_quality.csv"
+
+INFLUXDB_BUCKET = os.getenv("INFLUX_DB_BUCKET")
+url = os.getenv("INFLUX_DB_URL")
+token = os.getenv("INFLUX_DB_TOKEN")
+org = os.getenv("INFLUX_DB_ORG")
+influxdbClient = influxdb_client.InfluxDBClient(url=url, token=token, org=org)
 
 
 def timingDecorator(func):
