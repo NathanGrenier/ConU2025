@@ -8,6 +8,7 @@ load_dotenv()
 
 DATA_PATH = "./data"
 VIOLATIONS_FILE_PATH = f"{DATA_PATH}/violations.csv"
+STATIONS_FILE_PATH = f"{DATA_PATH}/stations.csv"
 AIR_QUALITY_FILE_PATH = f"{DATA_PATH}/air/air_quality_2022-2024.csv"
 
 POSTGRES_CONFIG = {
