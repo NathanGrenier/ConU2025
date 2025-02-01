@@ -1,16 +1,41 @@
 services:
+  influxdb:
+    image: influxdb:latest
+    container_name: influxdb
+    restart: unless-stopped
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb-storage:/var/lib/influxdb2
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=adminpass
+      - DOCKER_INFLUXDB_INIT_ORG=my-org
+      - DOCKER_INFLUXDB_INIT_BUCKET=my-bucket
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=my-super-secret-auth-token
+    networks:
+      - monitoring-network
+
   grafana:
     image: grafana/grafana-enterprise
     container_name: grafana
     restart: unless-stopped
     user: "0"
     environment:
-      - GF_SERVER_ROOT_URL=http://my.grafana.server/
+      - GF_SERVER_ROOT_URL=http://localhost:3000
     ports:
       - "3000:3000"
     volumes:
       - grafana-storage:/var/lib/grafana
-      # - "./data:/var/lib/grafana"
+    depends_on:
+      - influxdb
+    networks:
+      - monitoring-network
 
 volumes:
-  grafana-storage: {}
+  grafana-storage:
+  influxdb-storage:
+
+networks:
+  monitoring-network:
