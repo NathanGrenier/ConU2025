@@ -1,0 +1,16 @@
+services:
+  grafana:
+    image: grafana/grafana-enterprise
+    container_name: grafana
+    restart: unless-stopped
+    user: "0"
+    environment:
+      - GF_SERVER_ROOT_URL=http://my.grafana.server/
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-storage:/var/lib/grafana
+      # - "./data:/var/lib/grafana"
+
+volumes:
+  grafana-storage: {}
