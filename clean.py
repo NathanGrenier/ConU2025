@@ -52,7 +52,9 @@ def exportDfWithInfluxDBAnnotations(df: pd.DataFrame, annotations: List[str]) ->
     # Reorder Columns
     df = df[["_measurement", "stationId", "pollutant", "aqi", "timestamp"]]
 
-    with open(f"{DUMP_PATH}/cleaned_air_quality.csv", "w", encoding="utf-8") as f:
+    with open(
+        f"{DUMP_PATH}/cleaned_air_quality(annotated).csv", "w", encoding="utf-8"
+    ) as f:
         # Write annotations
         for line in annotations:
             f.write(line + "\n")
