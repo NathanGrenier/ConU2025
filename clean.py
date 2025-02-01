@@ -45,6 +45,23 @@ def combineDateHour(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def exportDfWithInfluxDBAnnotations(df: pd.DataFrame, annotations: List[str]) -> None:
+    df["_measurement"] = "air_quality"
+    df["stationId"] = df["stationId"].astype(str)
+    df["aqi"] = df["aqi"].astype(int)
+    # Reorder Columns
+    df = df[["_measurement", "stationId", "pollutant", "aqi", "timestamp"]]
+
+    with open(f"{DUMP_PATH}/cleaned_air_quality.csv", "w", encoding="utf-8") as f:
+        # Write annotations
+        for line in annotations:
+            f.write(line + "\n")
+        # Write header
+        f.write(",".join(df.columns) + "\n")
+        # Write data
+        df.to_csv(f, header=False, index=False, lineterminator="\n")
+
+
 if __name__ == "__main__":
     logger.setLevel(logging.DEBUG)
 
@@ -60,7 +77,12 @@ if __name__ == "__main__":
 
     df_air_quality = combineDateHour(df_air_quality)
     df_air_quality = df_air_quality.drop(columns=["date", "hour"])
-    dumpData(df_air_quality, f"{DUMP_PATH}/cleaned_air_quality.csv")
+    airQualityAnnotations = [
+        "#group,true,true,true,false,false",
+        "#datatype,measurement,tag,tag,long,dateTime:RFC3339",
+        "#default,air_quality,,,,",
+    ]
+    exportDfWithInfluxDBAnnotations(df_air_quality, airQualityAnnotations)
 
     df_violations = pd.read_csv(f"{VIOLATIONS_FILE_PATH}")
     violationsNameMapping = {
@@ -75,19 +97,6 @@ if __name__ == "__main__":
         "domaine": "domain",
     }
     df_violations = renameColumns(df_violations, violationsNameMapping)
-
-    violationsDropMapping = [
-        "offender_name",
-        "offence",
-        "location",
-        "infraction_date",
-        "judgment_date",
-        "amount_claimed",
-        "sentence",
-        "regulation_violated",
-        "domain",
-    ]
-    df_violations = keepColumns(df_violations, violationsDropMapping)
 
     df_violations = cleanViolations(df_violations)
 
