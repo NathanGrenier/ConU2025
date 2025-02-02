@@ -140,19 +140,19 @@ if __name__ == "__main__":
         df_air_quality = df_air_quality.drop(columns=["date", "hour"])
         dumpData(df_air_quality, f"{CLEANED_AIR_QUALITY_FILE_PATH}")
 
-    if UPLOAD:
-        uploadDfToInfluxDb(
-            CLEANED_AIR_QUALITY_FILE_PATH,
-            {
-                "bucket": f"{INFLUXDB_BUCKET}",
-                "data_frame_measurement_name": "air_quality",
-                "data_frame_tag_columns": ["stationId", "pollutant"],
-                "data_frame_timestamp_column": "timestamp",
-            },
-            cleanUpload=True,
-        )
-    else:
-        logger.info(f"Skipping InfluxDB Upload of: {CLEANED_AIR_QUALITY_FILE_PATH}")
+    # if UPLOAD:
+    #     uploadDfToInfluxDb(
+    #         CLEANED_AIR_QUALITY_FILE_PATH,
+    #         {
+    #             "bucket": f"{INFLUXDB_BUCKET}",
+    #             "data_frame_measurement_name": "air_quality",
+    #             "data_frame_tag_columns": ["stationId", "pollutant"],
+    #             "data_frame_timestamp_column": "timestamp",
+    #         },
+    #         cleanUpload=True,
+    #     )
+    # else:
+    #     logger.info(f"Skipping InfluxDB Upload of: {CLEANED_AIR_QUALITY_FILE_PATH}")
 
     ### Violations ###
     if not os.path.exists(CLEANED_VIOLATIONS_FILE_PATH):
@@ -177,29 +177,29 @@ if __name__ == "__main__":
 
         dumpData(df_violations, f"{CLEANED_VIOLATIONS_FILE_PATH}")
 
-    if UPLOAD:
-        uploadDfToInfluxDb(
-            f"{CLEANED_VIOLATIONS_FILE_PATH}",
-            {
-                "bucket": INFLUXDB_BUCKET,
-                "data_frame_measurement_name": "violations",
-                "data_frame_tag_columns": ["location"],
-                "data_frame_field_columns": [
-                    "offender_name",
-                    "offence",
-                    "location",
-                    "judgment_date",
-                    "amount_claimed",
-                    "sentence",
-                    "regulation_violated",
-                    "domain",
-                ],
-                "data_frame_timestamp_column": "infraction_date",
-            },
-            cleanUpload=True,
-        )
-    else:
-        logger.info(f"Skipping InfluxDB Upload of: {CLEANED_VIOLATIONS_FILE_PATH}")
+    # if UPLOAD:
+    #     uploadDfToInfluxDb(
+    #         f"{CLEANED_VIOLATIONS_FILE_PATH}",
+    #         {
+    #             "bucket": INFLUXDB_BUCKET,
+    #             "data_frame_measurement_name": "violations",
+    #             "data_frame_tag_columns": ["location"],
+    #             "data_frame_field_columns": [
+    #                 "offender_name",
+    #                 "offence",
+    #                 "location",
+    #                 "judgment_date",
+    #                 "amount_claimed",
+    #                 "sentence",
+    #                 "regulation_violated",
+    #                 "domain",
+    #             ],
+    #             "data_frame_timestamp_column": "infraction_date",
+    #         },
+    #         cleanUpload=True,
+    #     )
+    # else:
+    #     logger.info(f"Skipping InfluxDB Upload of: {CLEANED_VIOLATIONS_FILE_PATH}")
 
     ### Station ###
     if not os.path.exists(f"{CLEANED_STATIONS_FILE_PATH}"):
@@ -226,28 +226,28 @@ if __name__ == "__main__":
         df_stations = renameColumns(df_stations, stationNameMapping)
         df_stations = cleanStations(df_stations)
 
-        # Add a constant timestamp (e.g., Unix epoch 0)
-        df_stations["timestamp"] = "1970-01-01T00:00:00Z"
+        # # Add a constant timestamp (e.g., Unix epoch 0)
+        # df_stations["timestamp"] = "1970-01-01T00:00:00Z"
 
         dumpData(df_stations, f"{CLEANED_STATIONS_FILE_PATH}")
 
-    if UPLOAD:
-        uploadDfToInfluxDb(
-            f"{CLEANED_STATIONS_FILE_PATH}",
-            {
-                "bucket": INFLUXDB_BUCKET,
-                "data_frame_measurement_name": "stations",
-                "data_frame_tag_columns": ["station_id"],  # Tag for efficient joins
-                "data_frame_field_columns": [
-                    "name",
-                    "address",
-                    "latitude",
-                    "longitude",
-                    "status",
-                ],
-                "data_frame_timestamp_column": "timestamp",
-            },
-            cleanUpload=True,
-        )
-    else:
-        logger.info(f"Skipping InfluxDB Upload of: {CLEANED_STATIONS_FILE_PATH}")
+    # if UPLOAD:
+    #     uploadDfToInfluxDb(
+    #         f"{CLEANED_STATIONS_FILE_PATH}",
+    #         {
+    #             "bucket": INFLUXDB_BUCKET,
+    #             "data_frame_measurement_name": "stations",
+    #             "data_frame_tag_columns": ["station_id"],  # Tag for efficient joins
+    #             "data_frame_field_columns": [
+    #                 "name",
+    #                 "address",
+    #                 "latitude",
+    #                 "longitude",
+    #                 "status",
+    #             ],
+    #             "data_frame_timestamp_column": "timestamp",
+    #         },
+    #         cleanUpload=True,
+    #     )
+    # else:
+    #     logger.info(f"Skipping InfluxDB Upload of: {CLEANED_STATIONS_FILE_PATH}")
