@@ -33,9 +33,9 @@ influxdbClient = influxdb_client.InfluxDBClient(url=url, token=token, org=org)
 POSTGRES_CONFIG = {
     "host": "localhost",
     "port": 5432,
-    "dbname": "db",
-    "user": "postgres",
-    "password": "postgres",
+    "dbname": "grafana",
+    "user": "grafana",
+    "password": "grafana",
 }
 
 

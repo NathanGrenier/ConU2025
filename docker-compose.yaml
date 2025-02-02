@@ -17,39 +17,6 @@ services:
     networks:
       - monitoring-network
 
-  postgres:
-    container_name: postgres
-    image: postgres
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: db
-    ports:
-      - 5432:5432
-    volumes:
-      - db-data:/var/lib/postgresql/data
-    restart: always
-    networks:
-      - monitoring-network
-
-  pgadmin:
-    container_name: pgadmin
-    image: dpage/pgadmin4
-    user: root
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: root
-      PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION: "False"
-    ports:
-      - 5050:80
-    volumes:
-      - pgadmin:/var/lib/pgadmin
-    restart: always
-    logging:
-      driver: "none"
-    networks:
-      - monitoring-network
-
   grafana:
     image: grafana/grafana-enterprise
     container_name: grafana
@@ -61,17 +28,46 @@ services:
       - "3000:3000"
     volumes:
       - grafana-storage:/var/lib/grafana
+    networks:
+      - monitoring-network
     depends_on:
       - influxdb
       - postgres
+
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_DB: grafana
+      POSTGRES_USER: grafana
+      POSTGRES_PASSWORD: grafana
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
     networks:
       - monitoring-network
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    networks:
+      - monitoring-network
+    depends_on:
+      - postgres
 
 volumes:
   grafana-storage:
   influxdb-storage:
-  db-data:
-  pgadmin:
+  postgres-data:
+  pgadmin-data:
 
 networks:
   monitoring-network:
