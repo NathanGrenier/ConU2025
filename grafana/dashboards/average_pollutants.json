@@ -18,13 +18,13 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 1,
+  "id": 10,
   "links": [],
   "panels": [
     {
       "datasource": {
         "type": "grafana-postgresql-datasource",
-        "uid": "aebtnmekebc3kb"
+        "uid": "cebv7okflju2of"
       },
       "fieldConfig": {
         "defaults": {
@@ -56,8 +56,8 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
+        "h": 11,
+        "w": 24,
         "x": 0,
         "y": 0
       },
@@ -166,10 +166,11 @@
       "pluginVersion": "11.5.0",
       "targets": [
         {
-          "editorMode": "builder",
+          "editorMode": "code",
           "format": "table",
           "hide": false,
-          "rawSql": "SELECT latitude, longitude FROM stations LIMIT 50 ",
+          "rawQuery": true,
+          "rawSql": "SELECT latitude, longitude, name, sector_name FROM stations LIMIT 50 ",
           "refId": "A",
           "sql": {
             "columns": [
@@ -212,7 +213,7 @@
         {
           "datasource": {
             "type": "grafana-postgresql-datasource",
-            "uid": "aebtnmekebc3kb"
+            "uid": "cebv7okflju2of"
           },
           "editorMode": "builder",
           "format": "table",
@@ -318,7 +319,7 @@
     {
       "datasource": {
         "type": "grafana-postgresql-datasource",
-        "uid": "aebtnmekebc3kb"
+        "uid": "cebv7okflju2of"
       },
       "fieldConfig": {
         "defaults": {
@@ -392,7 +393,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 8
+        "y": 11
       },
       "id": 1,
       "options": {
@@ -413,7 +414,7 @@
         {
           "datasource": {
             "type": "grafana-postgresql-datasource",
-            "uid": "aebtnmekebc3kb"
+            "uid": "cebv7okflju2of"
           },
           "editorMode": "builder",
           "format": "time_series",
@@ -470,15 +471,9 @@
                     "field": "\"timestamp\"",
                     "fieldSrc": "field",
                     "operator": "macros",
-                    "value": [
-                      "timeFilter"
-                    ],
-                    "valueSrc": [
-                      "value"
-                    ],
-                    "valueType": [
-                      "datetime"
-                    ]
+                    "value": ["timeFilter"],
+                    "valueSrc": ["value"],
+                    "valueType": ["datetime"]
                   },
                   "type": "rule"
                 }
@@ -493,7 +488,7 @@
         {
           "datasource": {
             "type": "grafana-postgresql-datasource",
-            "uid": "aebtnmekebc3kb"
+            "uid": "cebv7okflju2of"
           },
           "editorMode": "code",
           "format": "table",
@@ -558,7 +553,7 @@
     {
       "datasource": {
         "type": "grafana-postgresql-datasource",
-        "uid": "aebtnmekebc3kb"
+        "uid": "cebv7okflju2of"
       },
       "fieldConfig": {
         "defaults": {
@@ -638,8 +633,8 @@
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 0,
-        "y": 16
+        "x": 12,
+        "y": 11
       },
       "id": 3,
       "options": {
@@ -660,13 +655,13 @@
         {
           "datasource": {
             "type": "grafana-postgresql-datasource",
-            "uid": "aebtnmekebc3kb"
+            "uid": "cebv7okflju2of"
           },
           "editorMode": "builder",
           "format": "time_series",
           "hide": false,
           "rawQuery": true,
-          "rawSql": "SELECT \"timestamp\" AS \"time\", AVG(aqi) AS \"value\" FROM air_quality_measurements WHERE ($__timeFilter(\"timestamp\") AND pollutant = 'PM') GROUP BY \"timestamp\" ORDER BY \"timestamp\" ASC LIMIT null ",
+          "rawSql": "SELECT \"timestamp\" AS \"time\", AVG(aqi) AS \"value\" FROM air_quality_measurements WHERE ($__timeFilter(\"timestamp\") AND pollutant = 'PM') GROUP BY \"timestamp\" ORDER BY \"timestamp\" ASC ",
           "refId": "air quality",
           "sql": {
             "columns": [
@@ -717,15 +712,9 @@
                     "field": "\"timestamp\"",
                     "fieldSrc": "field",
                     "operator": "macros",
-                    "value": [
-                      "timeFilter"
-                    ],
-                    "valueSrc": [
-                      "value"
-                    ],
-                    "valueType": [
-                      "datetime"
-                    ]
+                    "value": ["timeFilter"],
+                    "valueSrc": ["value"],
+                    "valueType": ["datetime"]
                   },
                   "type": "rule"
                 },
@@ -735,18 +724,10 @@
                     "field": "pollutant",
                     "fieldSrc": "field",
                     "operator": "equal",
-                    "value": [
-                      "PM"
-                    ],
-                    "valueError": [
-                      null
-                    ],
-                    "valueSrc": [
-                      "value"
-                    ],
-                    "valueType": [
-                      "text"
-                    ]
+                    "value": ["PM"],
+                    "valueError": [null],
+                    "valueSrc": ["value"],
+                    "valueType": ["text"]
                   },
                   "type": "rule"
                 }
@@ -761,7 +742,7 @@
         {
           "datasource": {
             "type": "grafana-postgresql-datasource",
-            "uid": "aebtnmekebc3kb"
+            "uid": "cebv7okflju2of"
           },
           "editorMode": "code",
           "format": "table",
@@ -822,6 +803,240 @@
       ],
       "title": "Air Quality (Particulate Matter) caused by code violations",
       "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "cebv7okflju2of"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "violations"
+            },
+            "properties": [
+              {
+                "id": "custom.drawStyle",
+                "value": "bars"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 19
+      },
+      "id": 4,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.5.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "cebv7okflju2of"
+          },
+          "editorMode": "builder",
+          "format": "time_series",
+          "hide": false,
+          "rawQuery": true,
+          "rawSql": "SELECT \"timestamp\" AS \"time\", AVG(aqi) AS \"value\" FROM air_quality_measurements WHERE $__timeFilter(\"timestamp\") GROUP BY \"timestamp\" ORDER BY \"timestamp\" ASC ",
+          "refId": "air quality",
+          "sql": {
+            "columns": [
+              {
+                "alias": "\"time\"",
+                "parameters": [
+                  {
+                    "name": "\"timestamp\"",
+                    "type": "functionParameter"
+                  }
+                ],
+                "type": "function"
+              },
+              {
+                "alias": "\"value\"",
+                "name": "AVG",
+                "parameters": [
+                  {
+                    "name": "aqi",
+                    "type": "functionParameter"
+                  }
+                ],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "name": "\"timestamp\"",
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "orderBy": {
+              "property": {
+                "name": "\"timestamp\"",
+                "type": "string"
+              },
+              "type": "property"
+            },
+            "orderByDirection": "ASC",
+            "whereJsonTree": {
+              "children1": [
+                {
+                  "id": "aaaaa989-4567-489a-bcde-f194c54eb3e4",
+                  "properties": {
+                    "field": "\"timestamp\"",
+                    "fieldSrc": "field",
+                    "operator": "macros",
+                    "value": ["timeFilter"],
+                    "valueSrc": ["value"],
+                    "valueType": ["datetime"]
+                  },
+                  "type": "rule"
+                }
+              ],
+              "id": "a898bbaa-0123-4456-b89a-b194c548fbd5",
+              "type": "group"
+            },
+            "whereString": "$__timeFilter(\"timestamp\")"
+          },
+          "table": "air_quality_measurements"
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "cebv7okflju2of"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "hide": false,
+          "rawQuery": true,
+          "rawSql": "SELECT\r\n  infraction_date as time,\r\n  0 as value\r\nFROM violations\r\nWHERE $__timeFilter(infraction_date::timestamptz)\r\nORDER BY infraction_date;",
+          "refId": "violations",
+          "sql": {
+            "columns": [
+              {
+                "alias": "\"value\"",
+                "parameters": [
+                  {
+                    "name": "0",
+                    "type": "functionParameter"
+                  }
+                ],
+                "type": "function"
+              },
+              {
+                "alias": "\"time\"",
+                "parameters": [
+                  {
+                    "name": "infraction_date",
+                    "type": "functionParameter"
+                  }
+                ],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50,
+            "whereJsonTree": {
+              "children1": [
+                {
+                  "id": "9b9889b9-cdef-4012-b456-7194c558bea4",
+                  "properties": {
+                    "fieldSrc": "field",
+                    "value": [],
+                    "valueSrc": []
+                  },
+                  "type": "rule"
+                }
+              ],
+              "id": "a898bbaa-0123-4456-b89a-b194c548fbd5",
+              "type": "group"
+            }
+          },
+          "table": "violations"
+        }
+      ],
+      "title": "Air Quality Index Over Time",
+      "type": "timeseries"
     }
   ],
   "preload": false,
@@ -832,13 +1047,13 @@
     "list": []
   },
   "time": {
-    "from": "2023-01-02T03:45:43.183Z",
-    "to": "2023-03-27T17:49:53.559Z"
+    "from": "2022-10-15T17:38:31.289Z",
+    "to": "2023-06-22T19:27:00.976Z"
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Air Quality Index Over Time",
-  "uid": "aebtoxrp428lce",
-  "version": 15,
+  "title": "Air Quality Index Over Time Copy",
+  "uid": "bebvcm5clai9sb",
+  "version": 2,
   "weekStart": ""
 }
