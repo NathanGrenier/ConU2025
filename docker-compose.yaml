@@ -1,22 +1,4 @@
 services:
-  influxdb:
-    image: influxdb:latest
-    container_name: influxdb
-    restart: unless-stopped
-    ports:
-      - "8086:8086"
-    volumes:
-      - influxdb-storage:/var/lib/influxdb2
-    environment:
-      - DOCKER_INFLUXDB_INIT_MODE=setup
-      - DOCKER_INFLUXDB_INIT_USERNAME=admin
-      - DOCKER_INFLUXDB_INIT_PASSWORD=adminpass
-      - DOCKER_INFLUXDB_INIT_ORG=my-org
-      - DOCKER_INFLUXDB_INIT_BUCKET=my-bucket
-      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=my-super-secret-auth-token
-    networks:
-      - monitoring-network
-
   grafana:
     image: grafana/grafana-enterprise
     container_name: grafana
@@ -67,7 +49,6 @@ services:
 
 volumes:
   grafana-storage:
-  influxdb-storage:
   postgres-data:
   pgadmin-data:
 
