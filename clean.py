@@ -1,25 +1,33 @@
 import logging
 import os
 import re
+import time
+import urllib.parse
+import threading
+import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
-import influxdb_client
+import numpy as np
 import pandas as pd
-from influxdb_client.client.write_api import SYNCHRONOUS
+import requests
 
 from config import (
     AIR_QUALITY_FILE_PATH,
     CLEANED_AIR_QUALITY_FILE_PATH,
     CLEANED_STATIONS_FILE_PATH,
     CLEANED_VIOLATIONS_FILE_PATH,
-    DUMP_PATH,
-    INFLUXDB_BUCKET,
     STATIONS_FILE_PATH,
     VIOLATIONS_FILE_PATH,
-    influxdbClient,
     logger,
 )
+
+# Rate limiter settings for geocoder.ca
+requests_per_second = 2
+request_semaphore = threading.Semaphore(requests_per_second)
+request_times = []
+request_lock = threading.Lock()
 
 
 class ViolationDomain(Enum):
@@ -70,56 +78,104 @@ def combineDateHour(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def createBucket(bucketName: str) -> None:
-    logger.debug(f"Checking if bucket '{bucketName}' exists...")
-    bucketsApi = influxdbClient.buckets_api()
+def wait_for_rate_limit():
+    """Ensure we don't exceed the rate limit"""
+    with request_lock:
+        current_time = time.time()
+        # Remove timestamps older than 1 second
+        while request_times and current_time - request_times[0] > 1:
+            request_times.pop(0)
+        # If we've made 2 requests in the last second, wait
+        if len(request_times) >= requests_per_second:
+            sleep_time = 1 - (current_time - request_times[0])
+            if sleep_time > 0:
+                time.sleep(sleep_time + 0.25)  # Add small buffer
+        request_times.append(current_time)
+
+
+def geocode_address(address: str) -> Tuple[float, float]:
+    """
+    Geocode an address using geocoder.ca API.
+    Returns (latitude, longitude) tuple or (None, None) if geocoding fails.
+    """
     try:
-        existingBuckets = bucketsApi.find_buckets().buckets
-        if not any(b.name == bucketName for b in existingBuckets):
-            logger.info(f"Creating bucket '{bucketName}'")
-            bucketsApi.create_bucket(
-                bucket_name=bucketName,
-                org=influxdbClient.org,
-            )
-        else:
-            logger.debug(f"Bucket '{bucketName}' already exists")
+        encoded_address = urllib.parse.quote(address)
+        url = f"https://geocoder.ca/?locate={encoded_address}&json=1"
+        
+        # Apply rate limiting
+        wait_for_rate_limit()
+        
+        response = requests.get(url)
+        if response.status_code == 200:
+            data = response.json()
+            # geocoder.ca returns latt and longt
+            if 'latt' in data and 'longt' in data:
+                return float(data['latt']), float(data['longt'])
+            elif 'error' in data:
+                logger.warning(f"Geocoding error for address {address}: {data['error'].get('message', 'Unknown error')}")
+                return None, None
+        
+        logger.warning(f"Geocoding failed for address {address}: {response.text}")
+        return None, None
     except Exception as e:
-        logger.error(f"Error creating bucket '{bucketName}': {str(e)}")
+        logger.warning(f"Geocoding failed for address {address}: {str(e)}")
+        return None, None
 
 
-def uploadDfToInfluxDb(
-    path: str, annotations: Dict[str, str], cleanUpload: bool = True
-) -> None:
-    bucket = annotations["bucket"]
-    # createBucket(bucket)
-
-    if cleanUpload:
-        logger.info(
-            f"Deleting all '{annotations['data_frame_measurement_name']}' records from bucket '{bucket}'"
-        )
-        delete_api = influxdbClient.delete_api()
-        start = "1970-01-01T00:00:00Z"
-        stop = "2100-01-01T00:00:00Z"
-        delete_api.delete(
-            start,
-            stop,
-            f'_measurement="{annotations["data_frame_measurement_name"]}"',
-            bucket=bucket,
-        )
-
-    logger.info(f"Uploading {path} to InfluxDB...")
-    for chunk in pd.read_csv(path, chunksize=100_000):
-        with influxdbClient.write_api(write_options=SYNCHRONOUS) as write_api:
+def geocode_addresses_parallel(addresses: List[str], max_workers: int = 4) -> List[Dict[str, float]]:
+    """
+    Geocode multiple addresses in parallel using a thread pool.
+    Returns a list of dictionaries containing latitude and longitude.
+    Rate limited to respect geocoder.ca's limits.
+    """
+    coordinates = []
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Submit all geocoding tasks
+        future_to_address = {
+            executor.submit(geocode_address, address): address 
+            for address in addresses
+        }
+        
+        total = len(addresses)
+        completed = 0
+        
+        # Process results as they complete
+        for future in concurrent.futures.as_completed(future_to_address):
+            address = future_to_address[future]
             try:
-                write_api.write(record=chunk, **annotations)
-                logger.debug(f"Uploaded {len(chunk)} records to InfluxDB")
-            except influxdb_client.client.exceptions.InfluxDBError as e:
-                logger.error(e)
+                lat, lon = future.result()
+                coordinates.append({'latitude': lat, 'longitude': lon})
+                completed += 1
+                if lat and lon:
+                    logger.info(f"Successfully geocoded ({completed}/{total}): {address}")
+                else:
+                    logger.warning(f"Failed to geocode ({completed}/{total}): {address}")
+            except Exception as e:
+                logger.error(f"Error geocoding {address}: {str(e)}")
+                coordinates.append({'latitude': None, 'longitude': None})
+                completed += 1
+    
+    return coordinates
+
+
+def clean_amount_fields(df: pd.DataFrame) -> pd.DataFrame:
+    """Clean amount fields by removing currency symbols and converting to floats"""
+    def clean_amount(x):
+        if pd.isna(x) or str(x).strip() == '':
+            return None
+        try:
+            digits = ''.join(c for c in str(x) if c.isdigit() or c == '.')
+            return float(digits) if digits else None
+        except (ValueError, TypeError):
+            return None
+            
+    for col in ['amount_claimed', 'sentence']:
+        df[col] = df[col].apply(clean_amount)
+    return df
 
 
 if __name__ == "__main__":
     logger.setLevel(logging.DEBUG)
-    UPLOAD = True
 
     ### Air Quality ###
     if not os.path.exists(CLEANED_AIR_QUALITY_FILE_PATH):
@@ -139,20 +195,6 @@ if __name__ == "__main__":
         df_air_quality = combineDateHour(df_air_quality)
         df_air_quality = df_air_quality.drop(columns=["date", "hour"])
         dumpData(df_air_quality, f"{CLEANED_AIR_QUALITY_FILE_PATH}")
-
-    # if UPLOAD:
-    #     uploadDfToInfluxDb(
-    #         CLEANED_AIR_QUALITY_FILE_PATH,
-    #         {
-    #             "bucket": f"{INFLUXDB_BUCKET}",
-    #             "data_frame_measurement_name": "air_quality",
-    #             "data_frame_tag_columns": ["stationId", "pollutant"],
-    #             "data_frame_timestamp_column": "timestamp",
-    #         },
-    #         cleanUpload=True,
-    #     )
-    # else:
-    #     logger.info(f"Skipping InfluxDB Upload of: {CLEANED_AIR_QUALITY_FILE_PATH}")
 
     ### Violations ###
     if not os.path.exists(CLEANED_VIOLATIONS_FILE_PATH):
@@ -174,32 +216,18 @@ if __name__ == "__main__":
         df_violations = renameColumns(df_violations, violationsNameMapping)
 
         df_violations = cleanViolations(df_violations)
+        
+        # Clean amount fields
+        df_violations = clean_amount_fields(df_violations)
+        
+        # Geocode violation locations
+        logger.info("Geocoding violation locations in parallel...")
+        coordinates = geocode_addresses_parallel(df_violations['location'].tolist())
+        coord_df = pd.DataFrame(coordinates)
+        df_violations['latitude'] = coord_df['latitude']
+        df_violations['longitude'] = coord_df['longitude']
 
         dumpData(df_violations, f"{CLEANED_VIOLATIONS_FILE_PATH}")
-
-    # if UPLOAD:
-    #     uploadDfToInfluxDb(
-    #         f"{CLEANED_VIOLATIONS_FILE_PATH}",
-    #         {
-    #             "bucket": INFLUXDB_BUCKET,
-    #             "data_frame_measurement_name": "violations",
-    #             "data_frame_tag_columns": ["location"],
-    #             "data_frame_field_columns": [
-    #                 "offender_name",
-    #                 "offence",
-    #                 "location",
-    #                 "judgment_date",
-    #                 "amount_claimed",
-    #                 "sentence",
-    #                 "regulation_violated",
-    #                 "domain",
-    #             ],
-    #             "data_frame_timestamp_column": "infraction_date",
-    #         },
-    #         cleanUpload=True,
-    #     )
-    # else:
-    #     logger.info(f"Skipping InfluxDB Upload of: {CLEANED_VIOLATIONS_FILE_PATH}")
 
     ### Station ###
     if not os.path.exists(f"{CLEANED_STATIONS_FILE_PATH}"):
@@ -226,28 +254,4 @@ if __name__ == "__main__":
         df_stations = renameColumns(df_stations, stationNameMapping)
         df_stations = cleanStations(df_stations)
 
-        # # Add a constant timestamp (e.g., Unix epoch 0)
-        # df_stations["timestamp"] = "1970-01-01T00:00:00Z"
-
         dumpData(df_stations, f"{CLEANED_STATIONS_FILE_PATH}")
-
-    # if UPLOAD:
-    #     uploadDfToInfluxDb(
-    #         f"{CLEANED_STATIONS_FILE_PATH}",
-    #         {
-    #             "bucket": INFLUXDB_BUCKET,
-    #             "data_frame_measurement_name": "stations",
-    #             "data_frame_tag_columns": ["station_id"],  # Tag for efficient joins
-    #             "data_frame_field_columns": [
-    #                 "name",
-    #                 "address",
-    #                 "latitude",
-    #                 "longitude",
-    #                 "status",
-    #             ],
-    #             "data_frame_timestamp_column": "timestamp",
-    #         },
-    #         cleanUpload=True,
-    #     )
-    # else:
-    #     logger.info(f"Skipping InfluxDB Upload of: {CLEANED_STATIONS_FILE_PATH}")
