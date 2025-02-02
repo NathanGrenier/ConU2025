@@ -30,6 +30,14 @@ token = os.getenv("INFLUX_DB_TOKEN")
 org = os.getenv("INFLUX_DB_ORG")
 influxdbClient = influxdb_client.InfluxDBClient(url=url, token=token, org=org)
 
+POSTGRES_CONFIG = {
+    "host": "localhost",
+    "port": 5432,
+    "dbname": "db",
+    "user": "postgres",
+    "password": "postgres",
+}
+
 
 def timingDecorator(func):
     def wrapper(*args, **kwargs):
