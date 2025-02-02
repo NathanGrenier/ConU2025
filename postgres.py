@@ -1,18 +1,11 @@
 import logging
 import os
 from typing import Dict, List
-import time
-import urllib.parse
-import requests
-import concurrent.futures
-from concurrent.futures import ThreadPoolExecutor
-import threading
 
 import numpy as np
 import pandas as pd
 import psycopg2
 from psycopg2 import sql
-from psycopg2.errors import UniqueViolation
 import psycopg2.extras
 
 from config import (
@@ -22,91 +15,6 @@ from config import (
     POSTGRES_CONFIG,
     logger,
 )
-
-requests_per_second = 2
-# Rate limiter for geocoder.ca
-request_semaphore = threading.Semaphore(requests_per_second)
-request_times = []
-request_lock = threading.Lock()
-
-def wait_for_rate_limit():
-    """Ensure we don't exceed the rate limit"""
-    with request_lock:
-        current_time = time.time()
-        # Remove timestamps older than 1 second
-        while request_times and current_time - request_times[0] > 1:
-            request_times.pop(0)
-        # If we've made 2 requests in the last second, wait
-        if len(request_times) >= requests_per_second:
-            sleep_time = 1 - (current_time - request_times[0])
-            if sleep_time > 0:
-                time.sleep(sleep_time + 0.1) # Add 0.1 second buffer
-        request_times.append(current_time)
-
-def geocode_address(address: str) -> tuple[float, float]:
-    """
-    Geocode an address using geocoder.ca API.
-    Returns (latitude, longitude) tuple or (None, None) if geocoding fails.
-    """
-    try:
-        encoded_address = urllib.parse.quote(address)
-        url = f"https://geocoder.ca/?locate={encoded_address}&json=1"
-        
-        # Apply rate limiting
-        wait_for_rate_limit()
-        
-        response = requests.get(url)
-        if response.status_code == 200:
-            data = response.json()
-            # geocoder.ca returns latt and longt
-            if 'latt' in data and 'longt' in data:
-                return float(data['latt']), float(data['longt'])
-            elif 'error' in data:
-                logger.warning(f"Geocoding error for address {address}: {data['error'].get('message', 'Unknown error')}")
-                return None, None
-        
-        logger.warning(f"Geocoding failed for address {address}: {response.text}")
-        return None, None
-    except Exception as e:
-        logger.warning(f"Geocoding failed for address {address}: {str(e)}")
-        return None, None
-
-
-def geocode_addresses_parallel(addresses: List[str], max_workers: int = 4) -> List[Dict[str, float]]:
-    """
-    Geocode multiple addresses in parallel using a thread pool.
-    Returns a list of dictionaries containing latitude and longitude.
-    Rate limited to respect geocoder.ca's limits.
-    """
-    coordinates = []
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        # Submit all geocoding tasks
-        future_to_address = {
-            executor.submit(geocode_address, address): address 
-            for address in addresses
-        }
-        
-        total = len(addresses)
-        completed = 0
-        
-        # Process results as they complete
-        for future in concurrent.futures.as_completed(future_to_address):
-            address = future_to_address[future]
-            try:
-                lat, lon = future.result()
-                coordinates.append({'latitude': lat, 'longitude': lon})
-                completed += 1
-                if lat and lon:
-                    logger.info(f"Successfully geocoded ({completed}/{total}): {address}")
-                else:
-                    logger.warning(f"Failed to geocode ({completed}/{total}): {address}")
-            except Exception as e:
-                logger.error(f"Error geocoding {address}: {str(e)}")
-                coordinates.append({'latitude': None, 'longitude': None})
-                completed += 1
-    
-    return coordinates
-
 
 def insert_air_quality(cursor, df_air_quality):
     """Insert air quality measurements into PostgreSQL."""
@@ -167,20 +75,6 @@ def insert_stations(cursor, df_stations):
 def insert_violations(cursor, df_violations):
     """Insert violations into PostgreSQL."""
     df_violations = df_violations.replace({np.nan: None})
-    
-    # Clean amount fields by removing currency symbols and all types of spaces
-    for col in ['amount_claimed', 'sentence']:
-        df_violations[col] = df_violations[col].apply(
-            lambda x: float(''.join(c for c in str(x) if c.isdigit() or c == '.')) if x is not None else None
-        )
-    
-    # Geocode addresses in parallel
-    logger.info("Geocoding violation locations in parallel...")
-    coordinates = geocode_addresses_parallel(df_violations['location'].tolist())
-    
-    coord_df = pd.DataFrame(coordinates)
-    df_violations['latitude'] = coord_df['latitude']
-    df_violations['longitude'] = coord_df['longitude']
 
     insert_query = sql.SQL("""
         INSERT INTO violations (
@@ -248,4 +142,4 @@ def upload_to_postgres(clean_upload: bool = True) -> None:
 
 
 if __name__ == "__main__":
-    upload_to_postgres(clean_upload=True)
+    upload_to_postgres()

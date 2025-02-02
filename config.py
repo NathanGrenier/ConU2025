@@ -2,11 +2,6 @@ import logging
 import os
 import time
 
-import influxdb_client
-from dotenv import load_dotenv
-
-load_dotenv()
-
 DATA_PATH = "./data"
 STATIONS_FILE_PATH = f"{DATA_PATH}/stations.csv"
 AIR_QUALITY_FILE_PATH = f"{DATA_PATH}/air/air_quality_2022-2024.csv"
@@ -19,16 +14,9 @@ CLEANED_VIOLATIONS_FILE_PATH = f"{DUMP_PATH}/cleaned_violations.csv"
 CLEANED_STATIONS_FILE_PATH = f"{DUMP_PATH}/cleaned_stations.csv"
 
 
-INFLUXDB_BUCKET = "my-bucket"
-# INFLUXDB_BUCKET_AIR_QUALITY = "air-quality"
-# INFLUXDB_BUCKET_VIOLATIONS = "violations"
-# INFLUXDB_BUCKET_STATIONS = "stations"
-
-
 url = os.getenv("INFLUX_DB_URL")
 token = os.getenv("INFLUX_DB_TOKEN")
 org = os.getenv("INFLUX_DB_ORG")
-influxdbClient = influxdb_client.InfluxDBClient(url=url, token=token, org=org)
 
 POSTGRES_CONFIG = {
     "host": "localhost",
@@ -37,7 +25,6 @@ POSTGRES_CONFIG = {
     "user": "grafana",
     "password": "grafana",
 }
-
 
 def timingDecorator(func):
     def wrapper(*args, **kwargs):
