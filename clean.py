@@ -14,9 +14,7 @@ from config import (
     CLEANED_STATIONS_FILE_PATH,
     CLEANED_VIOLATIONS_FILE_PATH,
     DUMP_PATH,
-    INFLUXDB_BUCKET_AIR_QUALITY,
-    INFLUXDB_BUCKET_STATIONS,
-    INFLUXDB_BUCKET_VIOLATIONS,
+    INFLUXDB_BUCKET,
     STATIONS_FILE_PATH,
     VIOLATIONS_FILE_PATH,
     influxdbClient,
@@ -93,7 +91,7 @@ def uploadDfToInfluxDb(
     path: str, annotations: Dict[str, str], cleanUpload: bool = True
 ) -> None:
     bucket = annotations["bucket"]
-    createBucket(bucket)
+    # createBucket(bucket)
 
     if cleanUpload:
         logger.info(
@@ -146,7 +144,7 @@ if __name__ == "__main__":
         uploadDfToInfluxDb(
             CLEANED_AIR_QUALITY_FILE_PATH,
             {
-                "bucket": f"{INFLUXDB_BUCKET_AIR_QUALITY}",
+                "bucket": f"{INFLUXDB_BUCKET}",
                 "data_frame_measurement_name": "air_quality",
                 "data_frame_tag_columns": ["stationId", "pollutant"],
                 "data_frame_timestamp_column": "timestamp",
@@ -183,7 +181,7 @@ if __name__ == "__main__":
         uploadDfToInfluxDb(
             f"{CLEANED_VIOLATIONS_FILE_PATH}",
             {
-                "bucket": INFLUXDB_BUCKET_VIOLATIONS,
+                "bucket": INFLUXDB_BUCKET,
                 "data_frame_measurement_name": "violations",
                 "data_frame_tag_columns": ["location"],
                 "data_frame_field_columns": [
@@ -237,7 +235,7 @@ if __name__ == "__main__":
         uploadDfToInfluxDb(
             f"{CLEANED_STATIONS_FILE_PATH}",
             {
-                "bucket": INFLUXDB_BUCKET_STATIONS,
+                "bucket": INFLUXDB_BUCKET,
                 "data_frame_measurement_name": "stations",
                 "data_frame_tag_columns": ["station_id"],  # Tag for efficient joins
                 "data_frame_field_columns": [

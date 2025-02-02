@@ -18,9 +18,11 @@ CLEANED_AIR_QUALITY_FILE_PATH = f"{DUMP_PATH}/cleaned_air_quality.csv"
 CLEANED_VIOLATIONS_FILE_PATH = f"{DUMP_PATH}/cleaned_violations.csv"
 CLEANED_STATIONS_FILE_PATH = f"{DUMP_PATH}/cleaned_stations.csv"
 
-INFLUXDB_BUCKET_AIR_QUALITY = "air-quality"
-INFLUXDB_BUCKET_VIOLATIONS = "violations"
-INFLUXDB_BUCKET_STATIONS = "stations"
+
+INFLUXDB_BUCKET = "my-bucket"
+# INFLUXDB_BUCKET_AIR_QUALITY = "air-quality"
+# INFLUXDB_BUCKET_VIOLATIONS = "violations"
+# INFLUXDB_BUCKET_STATIONS = "stations"
 
 
 url = os.getenv("INFLUX_DB_URL")
