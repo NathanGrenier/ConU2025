@@ -1,22 +1,4 @@
 services:
-  influxdb:
-    image: influxdb:latest
-    container_name: influxdb
-    restart: unless-stopped
-    ports:
-      - "8086:8086"
-    volumes:
-      - influxdb-storage:/var/lib/influxdb2
-    environment:
-      - DOCKER_INFLUXDB_INIT_MODE=setup
-      - DOCKER_INFLUXDB_INIT_USERNAME=admin
-      - DOCKER_INFLUXDB_INIT_PASSWORD=adminpass
-      - DOCKER_INFLUXDB_INIT_ORG=my-org
-      - DOCKER_INFLUXDB_INIT_BUCKET=my-bucket
-      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=my-super-secret-auth-token
-    networks:
-      - monitoring-network
-
   grafana:
     image: grafana/grafana-enterprise
     container_name: grafana
@@ -28,14 +10,44 @@ services:
       - "3000:3000"
     volumes:
       - grafana-storage:/var/lib/grafana
+    networks:
+      - monitoring-network
     depends_on:
-      - influxdb
+      - postgres
+
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: grafana
+      POSTGRES_USER: grafana
+      POSTGRES_PASSWORD: grafana
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
     networks:
       - monitoring-network
 
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com  # Default email for pgAdmin login
+      PGADMIN_DEFAULT_PASSWORD: admin           # Default password for pgAdmin login
+    ports:
+      - "5050:80"  # Expose pgAdmin on port 5050
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    networks:
+      - monitoring-network
+    depends_on:
+      - postgres
+
 volumes:
   grafana-storage:
-  influxdb-storage:
+  postgres-data:
+  pgadmin-data:
 
 networks:
   monitoring-network:
