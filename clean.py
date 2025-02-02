@@ -14,7 +14,9 @@ from config import (
     CLEANED_STATIONS_FILE_PATH,
     CLEANED_VIOLATIONS_FILE_PATH,
     DUMP_PATH,
-    INFLUXDB_BUCKET,
+    INFLUXDB_BUCKET_AIR_QUALITY,
+    INFLUXDB_BUCKET_STATIONS,
+    INFLUXDB_BUCKET_VIOLATIONS,
     STATIONS_FILE_PATH,
     VIOLATIONS_FILE_PATH,
     influxdbClient,
@@ -70,18 +72,32 @@ def combineDateHour(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def createBucket(bucketName: str) -> None:
+    logger.debug(f"Checking if bucket '{bucketName}' exists...")
+    bucketsApi = influxdbClient.buckets_api()
+    try:
+        existingBuckets = bucketsApi.find_buckets().buckets
+        if not any(b.name == bucketName for b in existingBuckets):
+            logger.info(f"Creating bucket '{bucketName}'")
+            bucketsApi.create_bucket(
+                bucket_name=bucketName,
+                org=influxdbClient.org,
+            )
+        else:
+            logger.debug(f"Bucket '{bucketName}' already exists")
+    except Exception as e:
+        logger.error(f"Error creating bucket '{bucketName}': {str(e)}")
+
+
 def uploadDfToInfluxDb(
     path: str, annotations: Dict[str, str], cleanUpload: bool = True
 ) -> None:
-    # airQualityAnnotations = [
-    #     "#group,true,true,true,false,false",
-    #     "#datatype,measurement,tag,tag,long,dateTime:RFC3339",
-    #     "#default,air_quality,,,,",
-    # ]
+    bucket = annotations["bucket"]
+    createBucket(bucket)
 
     if cleanUpload:
         logger.info(
-            f"Deleting all '{annotations['data_frame_measurement_name']}' records from bucket '{INFLUXDB_BUCKET}'"
+            f"Deleting all '{annotations['data_frame_measurement_name']}' records from bucket '{bucket}'"
         )
         delete_api = influxdbClient.delete_api()
         start = "1970-01-01T00:00:00Z"
@@ -90,7 +106,7 @@ def uploadDfToInfluxDb(
             start,
             stop,
             f'_measurement="{annotations["data_frame_measurement_name"]}"',
-            bucket=INFLUXDB_BUCKET,
+            bucket=bucket,
         )
 
     logger.info(f"Uploading {path} to InfluxDB...")
@@ -130,7 +146,7 @@ if __name__ == "__main__":
         uploadDfToInfluxDb(
             CLEANED_AIR_QUALITY_FILE_PATH,
             {
-                "bucket": f"{INFLUXDB_BUCKET}",
+                "bucket": f"{INFLUXDB_BUCKET_AIR_QUALITY}",
                 "data_frame_measurement_name": "air_quality",
                 "data_frame_tag_columns": ["stationId", "pollutant"],
                 "data_frame_timestamp_column": "timestamp",
@@ -160,8 +176,6 @@ if __name__ == "__main__":
         df_violations = renameColumns(df_violations, violationsNameMapping)
 
         df_violations = cleanViolations(df_violations)
-        # Add a constant timestamp (e.g., Unix epoch 0)
-        df_violations["timestamp"] = "1970-01-01T00:00:00Z"
 
         dumpData(df_violations, f"{CLEANED_VIOLATIONS_FILE_PATH}")
 
@@ -169,21 +183,20 @@ if __name__ == "__main__":
         uploadDfToInfluxDb(
             f"{CLEANED_VIOLATIONS_FILE_PATH}",
             {
-                "bucket": INFLUXDB_BUCKET,
+                "bucket": INFLUXDB_BUCKET_VIOLATIONS,
                 "data_frame_measurement_name": "violations",
-                "data_frame_tag_columns": ["station_id"],  # Tag for efficient joins
+                "data_frame_tag_columns": ["location"],
                 "data_frame_field_columns": [
                     "offender_name",
+                    "offence",
                     "location",
-                    "infraction_date",
-                    "judgment_date",
                     "judgment_date",
                     "amount_claimed",
                     "sentence",
                     "regulation_violated",
                     "domain",
                 ],
-                "data_frame_timestamp_column": "timestamp",
+                "data_frame_timestamp_column": "infraction_date",
             },
             cleanUpload=True,
         )
@@ -224,7 +237,7 @@ if __name__ == "__main__":
         uploadDfToInfluxDb(
             f"{CLEANED_STATIONS_FILE_PATH}",
             {
-                "bucket": INFLUXDB_BUCKET,
+                "bucket": INFLUXDB_BUCKET_STATIONS,
                 "data_frame_measurement_name": "stations",
                 "data_frame_tag_columns": ["station_id"],  # Tag for efficient joins
                 "data_frame_field_columns": [
