@@ -1,5 +1,7 @@
 ruff
+numpy
 pandas
 python-dotenv
 influxdb-client
-psycopg[binary]
+psycopg2-binary
+requests==2.31.0
